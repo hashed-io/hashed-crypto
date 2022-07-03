@@ -1,0 +1,28 @@
+{
+  "name": "hashed-crypto",
+  "version": "0.0.1",
+  "description": "Provides a high level crypto functions interface ",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest --watch"
+  },
+  "author": "Sebastian",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^28.1.4",
+    "eslint": "^8.19.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.2.3",
+    "eslint-plugin-promise": "^6.0.0",
+    "jest": "^28.1.2"
+  },
+  "dependencies": {
+    "hash-wasm": "^4.9.0",
+    "jest-environment-jsdom": "^28.1.2",
+    "js-crypto-hkdf": "^1.0.4",
+    "mime-types": "^2.1.35",
+    "tweetnacl": "^1.0.3",
+    "uuid": "^8.3.2"
+  }
+}
