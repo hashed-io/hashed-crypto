@@ -1,5 +1,5 @@
 {
-  "name": "hashed-crypto",
+  "name": "@smontero/hashed-crypto",
   "version": "0.0.1",
   "description": "Provides a high level crypto functions interface ",
   "main": "src/index.js",
