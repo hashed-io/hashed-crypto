@@ -19,6 +19,14 @@ class Crypto {
     return randomBytes(16)
   }
 
+  ownNonce () {
+    return randomBytes(secretbox.nonceLength)
+  }
+
+  sharedNonce () {
+    return randomBytes(box.nonceLength)
+  }
+
   generateKeyPair () {
     const {
       publicKey,
@@ -59,36 +67,49 @@ class Crypto {
 
   async cipher ({
     payload,
-    privateKey
+    privateKey,
+    nonce = null
   }) {
     const key = this._decodeKey(privateKey)
 
-    const nonce = randomBytes(secretbox.nonceLength)
+    nonce = nonce || this.ownNonce()
     const {
       type,
       rawPayload
-    } = await this._getRawPayload(payload)
+    } = await this.getRawPayload(payload)
     const cipheredPayload = secretbox(rawPayload, nonce, key)
 
-    return {
-      type,
-      fullCipheredPayload: this._createFullCipheredPayload(cipheredPayload, nonce)
-    }
+    return this._createFullCipheredPayload(cipheredPayload, nonce, type)
   }
 
+  /**
+   * deciphers a payload, either the fullCipheredPayload or cipheredPayload and nonce must be
+   * specified
+   *
+   * @param {string} [fullCipheredPayload] base64 encoded ciphered payload including nonce
+   * @param {Buffer} [cipheredPayload] ciphered payload
+   * @param {Buffer} [nonce]
+   * @param {string} privateKey base64 encoded private key
+   * @param {string} type type of the payload
+   * @returns
+   */
   decipher ({
-    fullCipheredPayload,
+    fullCipheredPayload = null,
+    cipheredPayload = null,
+    nonce = null,
     privateKey,
-    type
+    type = 'raw'
   }) {
     const key = this._decodeKey(privateKey)
-    const { cipheredPayload, nonce } = this._decodeFullCipheredPayload(fullCipheredPayload, secretbox.nonceLength)
+    if (fullCipheredPayload) {
+      ({ cipheredPayload, nonce, type } = this.decodeOwnFullCipheredPayload(fullCipheredPayload))
+    }
     const payload = secretbox.open(cipheredPayload, nonce, key)
 
     if (!payload) {
       throw new Error('Could not decrypt message')
     }
-    return this._toType(payload, type)
+    return this.toType(payload, type)
   }
 
   async cipherShared ({
@@ -99,35 +120,31 @@ class Crypto {
     const prvKey = this._decodeKey(privateKey)
     const pubKey = this._decodeKey(publicKey)
 
-    const nonce = randomBytes(box.nonceLength)
+    const nonce = this.sharedNonce()
     const {
       type,
       rawPayload
-    } = await this._getRawPayload(payload)
+    } = await this.getRawPayload(payload)
     const cipheredPayload = box(rawPayload, nonce, pubKey, prvKey)
-    return {
-      type,
-      fullCipheredPayload: this._createFullCipheredPayload(cipheredPayload, nonce)
-    }
+    return this._createFullCipheredPayload(cipheredPayload, nonce, type)
   };
 
   decipherShared ({
     privateKey,
     publicKey,
-    fullCipheredPayload,
-    type
+    fullCipheredPayload
   }) {
     const prvKey = this._decodeKey(privateKey)
     const pubKey = this._decodeKey(publicKey)
-    const { cipheredPayload, nonce } = this._decodeFullCipheredPayload(fullCipheredPayload, box.nonceLength)
+    const { cipheredPayload, nonce, type } = this.decodeSharedFullCipheredPayload(fullCipheredPayload)
     const payload = box.open(cipheredPayload, nonce, pubKey, prvKey)
     if (!payload) {
       throw new Error('Could not decrypt message')
     }
-    return this._toType(payload, type)
+    return this.toType(payload, type)
   }
 
-  _toType (payload, type) {
+  toType (payload, type) {
     if (type === 'raw') {
       return payload
     } else if (type === 'json') {
@@ -150,16 +167,21 @@ class Crypto {
     return extensionType.indexOf('/') > -1 ? mime.extension(extensionType) : extensionType
   }
 
-  _createFullCipheredPayload (cipheredPayload, nonce) {
-    const fullPayload = new Uint8Array(nonce.length + cipheredPayload.length)
+  _createFullCipheredPayload (cipheredPayload, nonce, type) {
+    let fullPayload = new Uint8Array(nonce.length + cipheredPayload.length)
     fullPayload.set(nonce)
     fullPayload.set(cipheredPayload, nonce.length)
-
-    return Buffer.from(fullPayload).toString('base64')
+    fullPayload = Buffer.from(fullPayload).toString('base64')
+    if (type !== 'raw') {
+      fullPayload = `${fullPayload}#${type}`
+    }
+    return fullPayload
   }
 
-  _decodeFullCipheredPayload (fullCipheredPayload, nonceLength) {
-    const fullPayload = Buffer.from(fullCipheredPayload, 'base64')
+  decodeFullCipheredPayload (fullCipheredPayload, nonceLength) {
+    let [fullPayload, type] = fullCipheredPayload.split('#')
+    type = type || 'raw'
+    fullPayload = Buffer.from(fullPayload, 'base64')
 
     const nonce = fullPayload.subarray(0, nonceLength)
     const cipheredPayload = fullPayload.subarray(
@@ -168,11 +190,20 @@ class Crypto {
     )
     return {
       nonce,
-      cipheredPayload
+      cipheredPayload,
+      type
     }
   }
 
-  async _getRawPayload (payload) {
+  decodeOwnFullCipheredPayload (fullCipheredPayload) {
+    return this.decodeFullCipheredPayload(fullCipheredPayload, secretbox.nonceLength)
+  }
+
+  decodeSharedFullCipheredPayload (fullCipheredPayload) {
+    return this.decodeFullCipheredPayload(fullCipheredPayload, box.nonceLength)
+  }
+
+  async getRawPayload (payload) {
     let type = null
     let rawPayload = null
     if (payload instanceof Buffer || payload instanceof Uint8Array) {

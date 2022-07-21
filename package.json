@@ -1,6 +1,6 @@
 {
   "name": "@smontero/hashed-crypto",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "description": "Provides a high level crypto functions interface",
   "main": "src/index.js",
   "scripts": {
@@ -9,6 +9,9 @@
   "author": "Sebastian",
   "license": "ISC",
   "devDependencies": {
+    "@polkadot/keyring": "^10.0.1",
+    "@polkadot/util": "^10.0.1",
+    "@polkadot/util-crypto": "^10.0.1",
     "@types/jest": "^28.1.4",
     "eslint": "^8.19.0",
     "eslint-config-standard": "^17.0.0",
