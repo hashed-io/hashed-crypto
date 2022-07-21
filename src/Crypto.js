@@ -68,15 +68,17 @@ class Crypto {
   async cipher ({
     payload,
     privateKey,
-    nonce = null
+    nonce = null,
+    type = null // If passing a raw payload, this parameter would be set as type
   }) {
     const key = this._decodeKey(privateKey)
 
     nonce = nonce || this.ownNonce()
     const {
-      type,
+      type: actualType,
       rawPayload
     } = await this.getRawPayload(payload)
+    type = actualType === 'raw' && type ? type : actualType
     const cipheredPayload = secretbox(rawPayload, nonce, key)
 
     return this._createFullCipheredPayload(cipheredPayload, nonce, type)
