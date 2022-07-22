@@ -33,8 +33,8 @@ class Crypto {
       secretKey
     } = box.keyPair()
     return {
-      publicKey: Buffer.from(publicKey).toString('base64'),
-      privateKey: Buffer.from(secretKey).toString('base64')
+      publicKey: this._encodeKey(publicKey),
+      privateKey: this._encodeKey(secretKey)
     }
   }
 
@@ -158,11 +158,14 @@ class Crypto {
   }
 
   _decodeKey (key) {
-    return Buffer.from(key, 'base64')
+    if (key.startsWith('0x')) {
+      key = key.substring(2)
+    }
+    return Buffer.from(key, 'hex')
   }
 
   _encodeKey (rawKey) {
-    return Buffer.from(rawKey).toString('base64')
+    return `0x${Buffer.from(rawKey).toString('hex')}`
   }
 
   _getExtension (extensionType) {
