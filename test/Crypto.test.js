@@ -81,6 +81,23 @@ describe('crypto', () => {
     // console.log('decrypted2: ', decipheredPayload)
   })
 
+  test('cipher/decipher shared self', async () => {
+    const key1 = crypto.generateKeyPair()
+    const payload = { p1: 'hola', p2: 2 }
+    const fullCipheredPayload = await crypto.cipherShared({
+      privateKey: key1.privateKey,
+      publicKey: key1.publicKey,
+      payload
+    })
+    // console.log('cipheredPayload: ', fullCipheredPayload)
+    const decipheredPayload = crypto.decipherShared({
+      privateKey: key1.privateKey,
+      publicKey: key1.publicKey,
+      fullCipheredPayload
+    })
+    expect(decipheredPayload).toEqual(payload)
+  })
+
   // test('cipher/decipher shared with substrate key', async () => {
   //   const key1 = crypto.generateKeyPair()
   //   const keyring = new Keyring()
